@@ -1,0 +1,295 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Arial-BoldMT;\f1\fnil\fcharset0 Menlo-Regular;\f2\fswiss\fcharset0 ArialMT;
+}
+{\colortbl;\red255\green255\blue255;\red26\green26\blue26;\red255\green255\blue255;\red109\green109\blue109;
+}
+{\*\expandedcolortbl;;\cssrgb\c13333\c13333\c13333;\cssrgb\c100000\c100000\c100000;\cssrgb\c50196\c50196\c50196;
+}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa323\partightenfactor0
+
+\f0\b\fs39 \cf2 \cb3 \expnd0\expndtw0\kerning0
+Video 1 \'97 Walking Man\cb1 \
+\pard\pardeftab720\sa260\partightenfactor0
+
+\f1\b0\fs24 \cf2 \cb3 bbox = (3, 179, 68, 237)
+\f2\fs26 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f1\fs24 \cf2 \cb3 python3 -u -c "\
+import cv2, time\
+video_path = '/home/xilinx/jupyter_notebooks/test_video.mp4'\
+bbox = (3, 179, 68, 237)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerCSRT_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+csrt_fps = sum(fps_list)/len(fps_list)\
+csrt_acc = success_count/frame_count*100\
+print('CSRT FPS:', round(csrt_fps,1), 'Accuracy:', round(csrt_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerKCF_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+kcf_fps = sum(fps_list)/len(fps_list)\
+kcf_acc = success_count/frame_count*100\
+print('KCF FPS:', round(kcf_fps,1), 'Accuracy:', round(kcf_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+x, y, w, h = [int(v) for v in bbox]\
+roi = frame[y:y+h, x:x+w]\
+hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)\
+roi_hist = cv2.calcHist([hsv_roi], [0], None, [180], [0, 180])\
+cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)\
+track_window = (x, y, w, h)\
+term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)\
+prev_center = (x + w//2, y + h//2)\
+still_frames = 0\
+fps_list, frame_count, stuck_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    frame_count += 1\
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)\
+    dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)\
+    t1 = time.time()\
+    _, track_window = cv2.meanShift(dst, track_window, term_crit)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.001))\
+    mx, my, mw, mh = track_window\
+    curr = (mx + mw//2, my + mh//2)\
+    move = ((curr[0]-prev_center[0])**2 + (curr[1]-prev_center[1])**2)**0.5\
+    still_frames = still_frames + 1 if move < 2 else 0\
+    if still_frames > 10:\
+        stuck_count += 1\
+    prev_center = curr\
+video.release()\
+ms_fps = sum(fps_list)/len(fps_list)\
+ms_acc = (frame_count-stuck_count)/frame_count*100\
+print('Meanshift FPS:', round(ms_fps,1), 'Accuracy:', round(ms_acc,1), flush=True)\
+print()\
+print('=== PYNQ-Z2 Results - Walking Man ===')\
+print('CSRT:', round(csrt_fps,1), 'fps |', round(csrt_acc,1), '% accuracy')\
+print('KCF:', round(kcf_fps,1), 'fps |', round(kcf_acc,1), '% accuracy')\
+print('Meanshift:', round(ms_fps,1), 'fps |', round(ms_acc,1), '% accuracy')\
+"\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf4 \cb1 \
+\pard\pardeftab720\sa323\partightenfactor0
+
+\f0\b\fs39 \cf2 \cb3 Video 2 \'97 Cheetah\cb1 \
+\pard\pardeftab720\sa260\partightenfactor0
+
+\f1\b0\fs24 \cf2 \cb3 bbox = (400, 155, 261, 339)
+\f2\fs26 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f1\fs24 \cf2 \cb3 python3 -u -c "\
+import cv2, time\
+video_path = '/home/xilinx/jupyter_notebooks/test_video2.mp4'\
+bbox = (400, 155, 261, 339)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerCSRT_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+csrt_fps = sum(fps_list)/len(fps_list)\
+csrt_acc = success_count/frame_count*100\
+print('CSRT FPS:', round(csrt_fps,1), 'Accuracy:', round(csrt_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerKCF_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+kcf_fps = sum(fps_list)/len(fps_list)\
+kcf_acc = success_count/frame_count*100\
+print('KCF FPS:', round(kcf_fps,1), 'Accuracy:', round(kcf_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+x, y, w, h = [int(v) for v in bbox]\
+roi = frame[y:y+h, x:x+w]\
+hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)\
+roi_hist = cv2.calcHist([hsv_roi], [0], None, [180], [0, 180])\
+cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)\
+track_window = (x, y, w, h)\
+term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)\
+prev_center = (x + w//2, y + h//2)\
+still_frames = 0\
+fps_list, frame_count, stuck_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    frame_count += 1\
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)\
+    dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)\
+    t1 = time.time()\
+    _, track_window = cv2.meanShift(dst, track_window, term_crit)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.001))\
+    mx, my, mw, mh = track_window\
+    curr = (mx + mw//2, my + mh//2)\
+    move = ((curr[0]-prev_center[0])**2 + (curr[1]-prev_center[1])**2)**0.5\
+    still_frames = still_frames + 1 if move < 2 else 0\
+    if still_frames > 10:\
+        stuck_count += 1\
+    prev_center = curr\
+video.release()\
+ms_fps = sum(fps_list)/len(fps_list)\
+ms_acc = (frame_count-stuck_count)/frame_count*100\
+print('Meanshift FPS:', round(ms_fps,1), 'Accuracy:', round(ms_acc,1), flush=True)\
+print()\
+print('=== PYNQ-Z2 Results - Cheetah ===')\
+print('CSRT:', round(csrt_fps,1), 'fps |', round(csrt_acc,1), '% accuracy')\
+print('KCF:', round(kcf_fps,1), 'fps |', round(kcf_acc,1), '% accuracy')\
+print('Meanshift:', round(ms_fps,1), 'fps |', round(ms_acc,1), '% accuracy')\
+"\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf4 \cb1 \
+\pard\pardeftab720\sa323\partightenfactor0
+
+\f0\b\fs39 \cf2 \cb3 Video 3 \'97 Bird\cb1 \
+\pard\pardeftab720\sa260\partightenfactor0
+
+\f1\b0\fs24 \cf2 \cb3 bbox = (590, 16, 43, 38)
+\f2\fs26 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f1\fs24 \cf2 \cb3 python3 -u -c "\
+import cv2, time\
+video_path = '/home/xilinx/jupyter_notebooks/test_video3.mp4'\
+bbox = (590, 16, 43, 38)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerCSRT_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+csrt_fps = sum(fps_list)/len(fps_list)\
+csrt_acc = success_count/frame_count*100\
+print('CSRT FPS:', round(csrt_fps,1), 'Accuracy:', round(csrt_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+tracker = cv2.legacy.TrackerKCF_create()\
+tracker.init(frame, bbox)\
+fps_list, frame_count, success_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    t1 = time.time()\
+    ok, _ = tracker.update(frame)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.0001))\
+    frame_count += 1\
+    if ok:\
+        success_count += 1\
+video.release()\
+kcf_fps = sum(fps_list)/len(fps_list)\
+kcf_acc = success_count/frame_count*100\
+print('KCF FPS:', round(kcf_fps,1), 'Accuracy:', round(kcf_acc,1), flush=True)\
+video = cv2.VideoCapture(video_path)\
+ok, frame = video.read()\
+x, y, w, h = [int(v) for v in bbox]\
+roi = frame[y:y+h, x:x+w]\
+hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)\
+roi_hist = cv2.calcHist([hsv_roi], [0], None, [180], [0, 180])\
+cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)\
+track_window = (x, y, w, h)\
+term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)\
+prev_center = (x + w//2, y + h//2)\
+still_frames = 0\
+fps_list, frame_count, stuck_count = [], 0, 0\
+while True:\
+    ok, frame = video.read()\
+    if not ok:\
+        break\
+    frame_count += 1\
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)\
+    dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)\
+    t1 = time.time()\
+    _, track_window = cv2.meanShift(dst, track_window, term_crit)\
+    t2 = time.time()\
+    fps_list.append(1.0 / (t2 - t1 + 0.001))\
+    mx, my, mw, mh = track_window\
+    curr = (mx + mw//2, my + mh//2)\
+    move = ((curr[0]-prev_center[0])**2 + (curr[1]-prev_center[1])**2)**0.5\
+    still_frames = still_frames + 1 if move < 2 else 0\
+    if still_frames > 10:\
+        stuck_count += 1\
+    prev_center = curr\
+video.release()\
+ms_fps = sum(fps_list)/len(fps_list)\
+ms_acc = (frame_count-stuck_count)/frame_count*100\
+print('Meanshift FPS:', round(ms_fps,1), 'Accuracy:', round(ms_acc,1), flush=True)\
+print()\
+print('=== PYNQ-Z2 Results - Bird ===')\
+print('CSRT:', round(csrt_fps,1), 'fps |', round(csrt_acc,1), '% accuracy')\
+print('KCF:', round(kcf_fps,1), 'fps |', round(kcf_acc,1), '% accuracy')\
+print('Meanshift:', round(ms_fps,1), 'fps |', round(ms_acc,1), '% accuracy')\
+"}
