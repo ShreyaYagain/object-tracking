@@ -1,4 +1,4 @@
-# Object Tracking Results
+# Object Tracking in a Video on PYNQ-Z2
 
 This project compares three tracking algorithms (CSRT, KCF, and Meanshift) implemented using OpenCV and deployed on both a laptop and PYNQ-Z2 hardware platform.
 
